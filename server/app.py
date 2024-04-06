@@ -24,6 +24,64 @@ api = Api(app)
 def index():
     return "<h1>Code challenge</h1>"
 
+class AllRestaurants(Resource):
+    def get(self):
+        try:
+            all_restaurants = [restaurant.to_dict(rules=("-restaurant_pizzas",)) for restaurant in Restaurant.query]
+            return all_restaurants, 200
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+api.add_resource(AllRestaurants, "/restaurants")
+
+
+class RestaurantById(Resource):
+    def get(self, id):
+        try: 
+            if restaurant := db.session.get(Restaurant, id):
+                return restaurant.to_dict(), 200
+            else:
+                return {"error": "Restaurant not found"}, 404
+        except Exception as e:
+            return {"error": str(e)}, 400
+        
+    def delete(self, id):
+        try: 
+            if restaurant := db.session.get(Restaurant, id):
+                db.session.delete(restaurant)
+                db.session.commit()
+                return "", 204
+            else:
+                return {"error": "Restaurant not found"}, 404
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+api.add_resource(RestaurantById, "/restaurants/<int:id>")
+
+
+class AllPizzas(Resource):
+    def get(self):
+        try:
+            all_pizzas = [pizza.to_dict(rules=("-restaurant_pizzas",)) for pizza in Pizza.query]
+            return all_pizzas, 200
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+api.add_resource(AllPizzas, "/pizzas")
+
+class AllRestaurantPizzas(Resource):
+    def post(self):
+        try:
+            data = request.json
+            new_restaurant_pizza = RestaurantPizza(**data)
+            db.session.add(new_restaurant_pizza)
+            db.session.commit()
+            return new_restaurant_pizza.to_dict(), 201
+        except Exception as e:
+            db.session.rollback()
+            return {"errors": ["validation errors"]}, 400
+
+api.add_resource(AllRestaurantPizzas, "/restaurant_pizzas")
 
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
